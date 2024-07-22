@@ -22,6 +22,8 @@ private:
 
   ros::Subscriber img_subs_;
   ros::Publisher path_pub_;
+
+  cv::Mat curr_img_;
 };
 
 #endif  // AR_PATH_NAV__PATH_GENERATOR_NODE_H_

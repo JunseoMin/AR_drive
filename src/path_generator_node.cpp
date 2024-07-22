@@ -4,9 +4,9 @@
 PathGenerator::PathGenerator(ros::NodeHandle nh_)
 : nh_(nh_), priv_nh_("~")
 {
-  img_subs_ = nh_.subscribe<sensor_msgs::Image>("/image_raw",10,&PathGenerator::image_callback,this);
+  img_subs_ = nh_.subscribe<sensor_msgs::Image>("/usb_cam/image_raw",10,&PathGenerator::image_callback,this);
   path_pub_ = nh_.advertise<nav_msgs::Path>("/ar_path",1000);
-
+  
 }
 
 void PathGenerator::image_callback(const sensor_msgs::Image::ConstPtr& msg){
@@ -14,12 +14,14 @@ void PathGenerator::image_callback(const sensor_msgs::Image::ConstPtr& msg){
   try
   {
     cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    curr_img_ = cv_ptr->image;
+    cv::imshow("current img",curr_img_);
+    cv::waitKey(1);
   }
   catch(const std::exception& e)
   {
     std::cerr << e.what() << '\n';
   }
-  
 }
 
 int main(int argc, char **argv){
