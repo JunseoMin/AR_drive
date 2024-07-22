@@ -16,6 +16,8 @@ public:
 
 private:
   void image_callback(const sensor_msgs::Image::ConstPtr& msg);
+  void get_coord();
+  nav_msgs::Path calc_path();
 
   ros::NodeHandle nh_;
   ros::NodeHandle priv_nh_;
