@@ -24,7 +24,13 @@ private:
   ros::NodeHandle priv_nh_;
 
   ros::Subscriber path_subs_;
-  ros::Publisher control_pub;
+  ros::Publisher control_pub_;
+
+  nav_msgs::Path path_;
+  geometry_msgs::Pose goal_pose_;
+
+  double k_;
+  double velocity_;
 
 };
 #endif  // AR_PATH_NAV__PATH_TRACKER_H_
