@@ -1,44 +1,62 @@
 #include "ar_path_nav/path_generator_node.h"
 
-
 PathGenerator::PathGenerator(ros::NodeHandle nh_)
 : nh_(nh_), priv_nh_("~")
 {
-  img_subs_ = nh_.subscribe<sensor_msgs::Image>("/usb_cam/image_raw",10,&PathGenerator::image_callback,this);
+  ar_subs_ = nh_.subscribe<ar_track_alvar_msgs::AlvarMarkers>("/ar_pose_marker",10,&PathGenerator::ar_callback,this);
   path_pub_ = nh_.advertise<nav_msgs::Path>("/ar_path",1000);
-
 }
 
-void PathGenerator::image_callback(const sensor_msgs::Image::ConstPtr& msg){
-  cv_bridge::CvImagePtr cv_ptr;
-  nav_msgs::Path ar_path;
-  
-  try
-  {
-    cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-    curr_img_ = cv_ptr->image;
-    cv::imshow("current img",curr_img_);
-    cv::waitKey(1);
-
-    PathGenerator::get_coord();
-    ar_path = PathGenerator::calc_path();
-
-    path_pub_.publish(ar_path);
-    ROS_INFO("PATH PUBLISHED!");
+void PathGenerator::ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr& msg){
+  if (msg->markers.empty()){
+    return;
   }
-  catch(const std::exception& e)
-  {
-    ROS_WARN("PATH NOT PUBLISHED! ERROR :");
-    std::cerr << e.what() << '\n';
-  }
+
+  ar_marks_ = msg->markers;
+  calc_path();
+  control();
 }
 
 void PathGenerator::get_coord(){
-  //get AR marker's coordinate
+  path_.poses.clear();
+  for (const auto& marker : ar_marks_) {
+    geometry_msgs::PoseStamped pose_stamped;
+    pose_stamped.header = marker.header;
+    pose_stamped.pose = marker.pose.pose;
+    path_.poses.push_back(pose_stamped);
+  }
+  ROS_INFO("input coord set");
 }
 
 nav_msgs::Path PathGenerator::calc_path(){
-  // calc path to follow and return
+  assert(!ar_marks_.empty());
+  get_coord();
+
+  path_.header.frame_id = "base_link";
+  path_.header.stamp = ros::Time::now();
+
+  // 경로의 위치 보정
+  if(path_.poses.front().pose.position.y > 0){
+    for (auto& pose : path_.poses){
+      pose.pose.position.y -= path_margin_;
+    }
+  } else {
+    for (auto& pose : path_.poses){
+      pose.pose.position.y += path_margin_;
+    }
+  }
+
+  ROS_INFO("path generated !!");
+
+  // publish path
+  path_pub_.publish(path_);
+
+  return path_;
+}
+
+void PathGenerator::control(){
+  //stenly control
+  
 }
 
 int main(int argc, char **argv){
