@@ -14,6 +14,10 @@
 
 #include <geometry_msgs/Pose.h>
 
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 #include <cassert>
 class PathGenerator
 {
@@ -23,7 +27,6 @@ public:
 private:
   void ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr& msg);
   void get_coord();
-  void control();
 
   nav_msgs::Path calc_path();
 
@@ -39,8 +42,8 @@ private:
   nav_msgs::Path path_;
   nav_msgs::Path interpolated_path_;
   
-  int path_length_;
   float path_margin_;
+  int interpolate_param_;
 };
 
 #endif  // AR_PATH_NAV__PATH_GENERATOR_NODE_H_

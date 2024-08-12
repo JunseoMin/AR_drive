@@ -14,7 +14,6 @@ void PathGenerator::ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPt
 
   ar_marks_ = msg->markers;
   calc_path();
-  control();
 }
 
 void PathGenerator::get_coord(){
@@ -22,9 +21,24 @@ void PathGenerator::get_coord(){
   for (const auto& marker : ar_marks_) {
     geometry_msgs::PoseStamped pose_stamped;
     pose_stamped.header = marker.header;
-    pose_stamped.pose = marker.pose.pose;
+
+    pose_stamped.pose.position.x = -marker.pose.pose.position.x;
+    pose_stamped.pose.position.y = marker.pose.pose.position.y;
+    pose_stamped.pose.position.z = marker.pose.pose.position.z;
+
+    tf2::Quaternion q_orig, q_rot, q_new;
+    tf2::convert(marker.pose.pose.orientation, q_orig);
+
+    q_rot.setRPY(0, 0, M_PI);
+
+    q_new = q_rot * q_orig;
+    q_new.normalize();
+
+    tf2::convert(q_new, pose_stamped.pose.orientation);
+
     path_.poses.push_back(pose_stamped);
   }
+
   ROS_INFO("input coord set");
 }
 
@@ -35,7 +49,6 @@ nav_msgs::Path PathGenerator::calc_path(){
   path_.header.frame_id = "base_link";
   path_.header.stamp = ros::Time::now();
 
-  // 경로의 위치 보정
   if(path_.poses.front().pose.position.y > 0){
     for (auto& pose : path_.poses){
       pose.pose.position.y -= path_margin_;
@@ -46,17 +59,45 @@ nav_msgs::Path PathGenerator::calc_path(){
     }
   }
 
+  //linear interpoliate path
+  nav_msgs::Path interpolated_path;
+  interpolated_path.header = path_.header;
+
+  for (size_t i = 0; i < path_.poses.size() - 1; ++i) {
+    const auto& p1 = path_.poses[i];
+    const auto& p2 = path_.poses[i + 1];
+    
+    interpolated_path.poses.push_back(p1);
+
+    for (int j = 1; j <= interpolate_param_; ++j) {
+      geometry_msgs::PoseStamped interpolated_pose;
+      interpolated_pose.header = p1.header;
+
+      double t = static_cast<double>(j) / (interpolate_param_ + 1);
+
+      interpolated_pose.pose.position.x = p1.pose.position.x + t * (p2.pose.position.x - p1.pose.position.x);
+      interpolated_pose.pose.position.y = p1.pose.position.y + t * (p2.pose.position.y - p1.pose.position.y);
+      interpolated_pose.pose.position.z = p1.pose.position.z + t * (p2.pose.position.z - p1.pose.position.z);
+
+      tf2::Quaternion q1, q2;
+      tf2::convert(p1.pose.orientation, q1);
+      tf2::convert(p2.pose.orientation, q2);
+      
+      tf2::Quaternion q_interpolated = q1.slerp(q2, t);
+      tf2::convert(q_interpolated, interpolated_pose.pose.orientation);
+      
+      interpolated_path.poses.push_back(interpolated_pose);
+    }
+  }
+  
+  interpolated_path.poses.push_back(path_.poses.back());  
+
   ROS_INFO("path generated !!");
 
   // publish path
   path_pub_.publish(path_);
 
   return path_;
-}
-
-void PathGenerator::control(){
-  //stenly control
-  
 }
 
 int main(int argc, char **argv){
