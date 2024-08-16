@@ -3,17 +3,18 @@
 PathTracker::PathTracker(ros::NodeHandle nh_)
 :nh_(nh_),priv_nh_("~")
 {
-  path_subs_ = nh_.subscribe("/ar_path",10,&PathTracker::path_callback,this);
+  path_subs_ = nh_.subscribe("/ar_path", 10, &PathTracker::path_callback ,this);
   control_pub_ = nh_.advertise<xycar_msgs::xycar_motor>("/xycar_motor", 10);
 
   ros::Timer timer = nh_.createTimer(ros::Duration(0.1), &PathTracker::timer_callback, this);
 }
 
-void PathTracker::path_callback(nav_msgs::Path::ConstPtr& msg){
-  path_ = *msg;
+void PathTracker::path_callback(const nav_msgs::Path::ConstPtr& msg){
+  path_.header = msg->header;
+  path_.poses = msg->poses;
 }
 
-void PathTracker::timer_callback()
+void PathTracker::timer_callback(const ros::TimerEvent&)
 {
   set_goal();
   stenly();
@@ -65,7 +66,6 @@ void PathTracker::stenly()
   if(heading_error < 0){
     cross_track_error = -cross_track_error;
   }
-
   double control_steering = heading_error + std::atan2(k_ * cross_track_error, velocity_);
 
   xycar_msgs::xycar_motor motor_msg;

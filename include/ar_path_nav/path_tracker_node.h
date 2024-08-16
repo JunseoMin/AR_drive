@@ -15,8 +15,8 @@ public:
 private:
   int get_closest_idx();
   
-  void path_callback(nav_msgs::Path::ConstPtr& msg);
-  void timer_callback();
+  void path_callback(const nav_msgs::Path::ConstPtr& msg);
+  void timer_callback(const ros::TimerEvent& );
   void set_goal();
   void stenly();
 
