@@ -18,6 +18,10 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
+#include <tf2/buffer_core.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+
 #include <cassert>
 class PathGenerator
 {
@@ -42,6 +46,9 @@ private:
   nav_msgs::Path path_;
   nav_msgs::Path interpolated_path_;
   
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
+
   float path_margin_;
   int interpolate_param_;
 };

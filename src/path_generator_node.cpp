@@ -1,10 +1,12 @@
 #include "ar_path_nav/path_generator_node.h"
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 PathGenerator::PathGenerator(ros::NodeHandle nh_)
-: nh_(nh_), priv_nh_("~")
+: nh_(nh_), priv_nh_("~"), tf_listener_(tf_buffer_), path_margin_(0.2), interpolate_param_(10)
 {
   ar_subs_ = nh_.subscribe<ar_track_alvar_msgs::AlvarMarkers>("/ar_pose_marker",10,&PathGenerator::ar_callback,this);
-  path_pub_ = nh_.advertise<nav_msgs::Path>("/ar_path",1000);
+  path_pub_ = nh_.advertise<nav_msgs::Path>("/ar_path",10);
 }
 
 void PathGenerator::ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr& msg){
@@ -36,6 +38,15 @@ void PathGenerator::get_coord(){
 
     tf2::convert(q_new, pose_stamped.pose.orientation);
 
+    // Transform pose to odom frame (assuming pose_stamped is originally in base_link frame)
+    try {
+      pose_stamped.header.frame_id = "base_link";  // Original frame
+      tf_buffer_.transform(pose_stamped, pose_stamped, "odom", ros::Duration(1.0));  // Transform to odom frame
+    } catch (tf2::TransformException &ex) {
+      ROS_WARN("%s",ex.what());
+      continue;
+    }
+
     path_.poses.push_back(pose_stamped);
   }
 
@@ -46,7 +57,7 @@ nav_msgs::Path PathGenerator::calc_path(){
   assert(!ar_marks_.empty());
   get_coord();
 
-  path_.header.frame_id = "base_link";
+  path_.header.frame_id = "odom";  // Set the frame to "odom"
   path_.header.stamp = ros::Time::now();
 
   if(path_.poses.front().pose.position.y > 0){
@@ -59,7 +70,7 @@ nav_msgs::Path PathGenerator::calc_path(){
     }
   }
 
-  //linear interpoliate path
+  // Linear interpolate path
   nav_msgs::Path interpolated_path;
   interpolated_path.header = path_.header;
 
@@ -77,7 +88,7 @@ nav_msgs::Path PathGenerator::calc_path(){
 
       interpolated_pose.pose.position.x = p1.pose.position.x + t * (p2.pose.position.x - p1.pose.position.x);
       interpolated_pose.pose.position.y = p1.pose.position.y + t * (p2.pose.position.y - p1.pose.position.y);
-      interpolated_pose.pose.position.z = p1.pose.position.z + t * (p2.pose.position.z - p1.pose.position.z);
+      interpolated_pose.pose.position.z = 0;
 
       tf2::Quaternion q1, q2;
       tf2::convert(p1.pose.orientation, q1);
@@ -95,7 +106,7 @@ nav_msgs::Path PathGenerator::calc_path(){
   ROS_INFO("path generated !!");
 
   // publish path
-  path_pub_.publish(path_);
+  path_pub_.publish(interpolated_path);
 
   return path_;
 }
