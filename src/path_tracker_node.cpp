@@ -48,7 +48,9 @@ void PathTracker::set_goal() {
   goal_prev_ = goal_idx;
 
   goal_pose_ = path_.poses[goal_idx].pose;
+  ROS_INFO("********************************", goal_idx);
   ROS_INFO("goal pose set!! idx: %d", goal_idx);
+  ROS_INFO("goal pose set!! x: %lf y: %lf", path_.poses[goal_idx].pose.position.x,path_.poses[goal_idx].pose.position.y);
 }
 
 int PathTracker::get_closest_idx() {

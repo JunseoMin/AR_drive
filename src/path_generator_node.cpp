@@ -155,7 +155,10 @@ PathGenerator::PathGenerator(ros::NodeHandle nh_)
 }
 
 void PathGenerator::ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr& msg) {
+  ROS_WARN("AR callback start!!");
+  
   if (msg->markers.empty()) {
+    ROS_WARN("NO MARKER return.");
     return;
   }
 
@@ -166,36 +169,54 @@ void PathGenerator::ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPt
 void PathGenerator::get_coord() {
   path_.poses.clear();
 
+  ROS_INFO("get coord start!!");
+  
   for (const auto& marker : ar_marks_) {
     geometry_msgs::PoseStamped pose_stamped;
     pose_stamped.header = marker.header;
-
+        
     pose_stamped.pose.position = marker.pose.pose.position;
+    pose_stamped.header.frame_id = "usb_cam";
 
     // Transform pose to odom frame (assuming pose_stamped is originally in usb_cam frame)
     try {
-      pose_stamped.header.frame_id = "usb_cam";  // Original frame
-      tf_buffer_.transform(pose_stamped, pose_stamped, "odom", ros::Duration(1.0));  // Transform to odom frame
+      geometry_msgs::PoseStamped pose_in_odom;
+      tf_buffer_.transform(pose_stamped, pose_in_odom, "odom", ros::Duration(1.0));  // Transform to odom frame ㅅㅂ왜 이라인 안됨?
+
+      pose_in_odom.pose.position.z = 0;
+      
+      ROS_INFO("------------------------");
+      ROS_INFO("converted x: %lf",pose_in_odom.pose.position.x);
+      ROS_INFO("converted y: %lf",pose_in_odom.pose.position.y);
+      ROS_INFO("------------------------");
+      
+      path_.poses.push_back(pose_in_odom);
+
     } catch (tf2::TransformException& ex) {
-      ROS_ERROR("%s \n error!!!!", ex.what());
+      ROS_ERROR("%s // RETURN", ex.what());
       return;
     }
 
-    path_.poses.push_back(pose_stamped);
+  }
+
+
+  if (ar_marks_.size() <= 1)
+  {
+    ROS_WARN("one ar marker");
+
+    path_pub_.publish(path_);
+    return;
   }
 
   ROS_INFO("input coord set");
 }
-
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Matrix3x3.h>
 
 nav_msgs::Path PathGenerator::calc_path() {
   get_coord();
   ROS_INFO("calc path start!");
 
   path_.header.frame_id = "odom";  // Set the frame to "odom"
-  path_.header.stamp = ros::Time::now();
+  path_.header.stamp = ros::Time(0);
   ROS_INFO("header_set");
 
   if (path_.poses.empty()) {
