@@ -1,6 +1,6 @@
 #include <cmath>
 #include <eigen3/Eigen/Core>
-#include <vector/vector.hpp>
+#include <vector>
 
 class Circular
 {
@@ -10,10 +10,34 @@ private:
     double x_;
     double y_;
 
-    double radian_;
+    double degree_;
+    std::vector<double> pose_x_;
+    std::vector<double> pose_y_;
+    bool left_; 
+
+    void calc_circular(){
+        if (left_){
+            for (int angle = 0 ; angle < degree_ ; angle++){
+                double x = std::cos(r_) + x_;
+                double y = std::cos(r_) + y_;
+                pose_x_.push_back(x);
+                pose_y_.push_back(y);
+            }
+        }
+
+    }
 
 public:
-    Circular();
+    Circular(){
+        pose_x_.clear();
+        pose_y_.clear();
+
+        r_ = 0.0;
+        x_ = 0.0;
+        y_ = 0.0;
+        
+        degree_ = 0.0;
+    }
     ~Circular();
 
     void set_radious(const double r){
@@ -25,12 +49,23 @@ public:
         y_ = y;
     }
 
-    void set_angle(const double radian){
-        radian_ = radian;
+    void set_angle(const double degree){
+        degree_ = degree;
     }
 
-    void get_position(){
-        
+    void set_half(const bool left){
+        left_ = left;
     }
 
+    void set_poses(){
+        calc_circular();
+    }
+
+    std::vector<double> get_x(){
+        return pose_x_;
+    }
+
+    std::vector<double> get_y(){
+        return pose_y_;
+    }
 };
