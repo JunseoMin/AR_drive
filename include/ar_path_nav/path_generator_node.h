@@ -38,6 +38,7 @@ private:
   void get_coord();
   void set_points();
   void linear_interpolate();
+  void spline_path();
 
   nav_msgs::Path calc_path();
 

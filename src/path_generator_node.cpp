@@ -85,9 +85,7 @@ nav_msgs::Path PathGenerator::calc_path() {
 
   set_points(); // set three points to make path
   linear_interpolate();
-  // spline();
-
-  path_pub_.publish(path_);
+  spline_path();  // spline and publish path
 }
 
 void PathGenerator::set_points(){
@@ -149,6 +147,47 @@ void PathGenerator::linear_interpolate() {
 
   // Replace the path with the interpolated path
   path_.poses = interpolated_path;
+}
+
+void PathGenerator::spline_path() {
+  nav_msgs::Path splined_path;
+  splined_path.header = path_.header;
+
+  std::vector<double> x, y;
+
+  // Extract x and y coordinates from path poses
+  for (const auto& pose : path_.poses) {
+    x.push_back(pose.pose.position.x);
+    y.push_back(pose.pose.position.y);
+  }
+
+  // Create a 2D spline
+  CubicSpline2D spline(x, y);
+
+  // Generate splined path points
+  double total_s = spline.calc_s(x, y).back();
+  double ds = 0.1; // Step size for spline sampling (adjust as needed)
+    
+  for (double s = 0; s <= total_s; s += ds) {
+    auto [sx, sy] = spline.calc_position(s);
+    geometry_msgs::PoseStamped pose;
+    
+    pose.header = path_.header;
+    pose.pose.position.x = sx;
+    pose.pose.position.y = sy;
+    pose.pose.position.z = 0.0;
+
+    // Calculate yaw (orientation) using the spline's derivative
+    double yaw = spline.calc_yaw(s);
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw);
+    pose.pose.orientation = tf2::toMsg(q);
+
+    splined_path.poses.push_back(pose);
+  }
+
+  // Publish the splined path
+  path_pub_.publish(splined_path);
 }
 
 int main(int argc, char** argv) {
