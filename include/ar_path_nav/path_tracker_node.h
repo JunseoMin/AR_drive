@@ -42,5 +42,7 @@ private:
   double curr_y_;
 
   geometry_msgs::Quaternion curr_ori_;
+
+  int goal_prev_;
 };
 #endif  // AR_PATH_NAV__PATH_TRACKER_H_

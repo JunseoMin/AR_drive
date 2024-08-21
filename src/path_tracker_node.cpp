@@ -28,7 +28,7 @@ void PathTracker::timer_callback(const ros::TimerEvent&) {
     ROS_WARN("Received empty path, skipping this cycle.");
     return;
   }
-
+  ROS_INFO("timer callback start!");
   set_goal();
   stenly();
 }
@@ -41,12 +41,20 @@ void PathTracker::set_goal() {
     goal_idx = path_.poses.size() - 1;
   }
 
+  if (goal_idx < goal_prev_ ){
+    goal_idx = goal_prev_ + 1;
+  }
+
+  goal_prev_ = goal_idx;
+
   goal_pose_ = path_.poses[goal_idx].pose;
+  ROS_INFO("goal pose set!! idx: %d", goal_idx);
 }
 
 int PathTracker::get_closest_idx() {
   double min_dist = std::numeric_limits<double>::max();
   int closest_idx = 0;
+  ROS_INFO("current x: %f current y: %f", curr_x_, curr_y_);
 
   for (size_t i = 0; i < path_.poses.size(); ++i) {
     double dx = curr_x_ - path_.poses[i].pose.position.x;
@@ -75,6 +83,7 @@ void PathTracker::stenly() {
       curr_ori_.z,
       curr_ori_.w);
   tf::Matrix3x3 m(q);
+
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
 
@@ -91,6 +100,7 @@ void PathTracker::stenly() {
   motor_msg.angle = control_steering;
   motor_msg.speed = velocity_;
 
+  ROS_INFO("motor published (angle): %lf", control_steering);
   control_pub_.publish(motor_msg);
 }
 
