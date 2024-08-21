@@ -16,15 +16,23 @@ private:
     bool left_; 
 
     void calc_circular(){
-        if (left_){
-            for (int angle = 0 ; angle < degree_ ; angle++){
+        if (left_){ // right half circle
+            for (double angle = -(degree_ / 2) ; angle < degree_ / 2 ; angle += 1.){
                 double x = std::cos(r_) + x_;
-                double y = std::cos(r_) + y_;
+                double y = std::sin(r_) + y_;
                 pose_x_.push_back(x);
                 pose_y_.push_back(y);
             }
         }
 
+        else{   // left half circle
+            for (double angle = -(degree_ / 2) ; angle < degree_ / 2 ; angle += 1.){
+                double x = std::cos(r_) + x_;
+                double y = std::sin(r_) + y_;
+                pose_x_.push_back(x);
+                pose_y_.push_back(y);
+            }
+        }
     }
 
 public:
@@ -67,5 +75,9 @@ public:
 
     std::vector<double> get_y(){
         return pose_y_;
+    }
+
+    std::vector<double> gwt_yaw(){
+        
     }
 };

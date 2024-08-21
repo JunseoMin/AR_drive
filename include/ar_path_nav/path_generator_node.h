@@ -13,6 +13,8 @@
 #include <ar_track_alvar_msgs/AlvarMarker.h>
 
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -21,6 +23,9 @@
 #include <tf2/buffer_core.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+
+#include <ar_path_nav/circular.hpp>
+#include <ar_path_nav/spline.hpp>
 
 #include <cassert>
 class PathGenerator
@@ -31,6 +36,8 @@ public:
 private:
   void ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr& msg);
   void get_coord();
+  void set_points();
+  void linear_interpolate();
 
   nav_msgs::Path calc_path();
 
@@ -44,12 +51,19 @@ private:
 
   std::vector<ar_track_alvar_msgs::AlvarMarker> ar_marks_;
   nav_msgs::Path path_;
-  nav_msgs::Path interpolated_path_;
   
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
-  float path_margin_;
+  ar_track_alvar_msgs::AlvarMarker close_marker_;
+
+  geometry_msgs::PoseStamped pose_marker_odom_;
+  geometry_msgs::TransformStamped T_ob_;
+
+  geometry_msgs::PoseStamped point_margin_;
+  geometry_msgs::PoseStamped point_central_;
+  geometry_msgs::PoseStamped point_baselink_;
+
   int interpolate_param_;
 };
 
