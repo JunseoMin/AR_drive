@@ -66,6 +66,8 @@ private:
   geometry_msgs::PoseStamped point_baselink_;
 
   int interpolate_param_;
+
+  bool error_flag_;
 };
 
 #endif  // AR_PATH_NAV__PATH_GENERATOR_NODE_H_

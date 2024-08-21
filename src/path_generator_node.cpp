@@ -10,6 +10,8 @@ PathGenerator::PathGenerator(ros::NodeHandle nh_)
 }
 
 void PathGenerator::ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr& msg) {
+  ar_marks_.clear();
+
   if (msg->markers.empty()) {
     ROS_WARN("NO MARKER return.");
     return;
@@ -36,25 +38,29 @@ void PathGenerator::get_coord() {
     }
   }  
 
+  ROS_INFO("closest marker set");
+
   geometry_msgs::PoseStamped pose_stamped;
   pose_stamped.header = close_marker_.header;
   pose_stamped.pose.position = close_marker_.pose.pose.position;
 
   // ar pose margin
-  if(pose_stamped.pose.position.y < 0){
-    pose_stamped.pose.position.y += 0.2;
+  if(pose_stamped.pose.position.z < 0){
+    pose_stamped.pose.position.z += 0.3;
   }
   else{
-    pose_stamped.pose.position.y -= 0.2;
+    pose_stamped.pose.position.z -= 0.3;
   }
+
+  ROS_INFO("add margin!!");
 
   pose_stamped.header.frame_id = "usb_cam";
 
   try {
     geometry_msgs::PoseStamped pose_in_odom;
     tf_buffer_.transform(pose_stamped, pose_in_odom, "odom", ros::Duration(1.0));  // Transform to odom frame
-
     T_ob_ = tf_buffer_.lookupTransform("odom","base_link",ros::Time(0));
+
     pose_in_odom.pose.position.z = 0; 
 
     ROS_INFO("------------------------");
@@ -64,8 +70,10 @@ void PathGenerator::get_coord() {
     
     pose_marker_odom_ = pose_in_odom;
 
+    error_flag_ =false;
   } catch (tf2::TransformException& ex) {
     ROS_ERROR("%s", ex.what());
+    error_flag_ = true;
     return;
   }
 }
@@ -75,24 +83,37 @@ nav_msgs::Path PathGenerator::calc_path() {
   // T_ob_ odom -> base_link transform
   get_coord();
 
+  if(error_flag_){
+    ROS_WARN("tf error");
+    return path_;
+  }
+
   path_.header.frame_id = "odom";  // Set the frame to "odom"
   path_.header.stamp = ros::Time(0);
 
-  if (path_.poses.empty()) {
-    ROS_ERROR("empty path");
-    return nav_msgs::Path();  // Return an empty path
-  }
+  // if (path_.poses.empty()) {
+  //   ROS_ERROR("empty path");
+  //   return nav_msgs::Path();  // Return an empty path
+  // }
 
   set_points(); // set three points to make path
   linear_interpolate();
-  spline_path();  // spline and publish path
+
+  path_pub_.publish(path_);
+  ROS_INFO("path pub!");
+  // spline_path();  // spline and publish path
+  return path_;
 }
 
 void PathGenerator::set_points(){
   // use base_link, margined AR pose, center of AR pose and base_link
-  point_baselink_.pose.position.x = T_ob_.transform.translation.x;
-  point_baselink_.pose.position.y = T_ob_.transform.translation.y;
-  point_baselink_.pose.position.z = 0.;
+  try{
+    point_baselink_.pose.position.x = T_ob_.transform.translation.x;
+    point_baselink_.pose.position.y = T_ob_.transform.translation.y;
+    point_baselink_.pose.position.z = 0.;
+  } catch (tf2::TransformException& ex) {
+    ROS_ERROR("%s", ex.what());
+  }
 
   point_margin_.pose.position.x = pose_marker_odom_.pose.position.x;
   point_margin_.pose.position.y = pose_marker_odom_.pose.position.y;
@@ -105,6 +126,7 @@ void PathGenerator::set_points(){
   path_.poses.push_back(point_baselink_);
   path_.poses.push_back(point_central_);
   path_.poses.push_back(point_margin_);
+  ROS_INFO("point set !!");
 }
 
 void PathGenerator::linear_interpolate() {
@@ -133,6 +155,8 @@ void PathGenerator::linear_interpolate() {
       interpolated_pose.pose.position.z = start_pose.pose.position.z +
                                           j * (end_pose.pose.position.z - start_pose.pose.position.z) / interpolate_param_;
 
+      //TODO: add orientation
+      //ASIS - static trash value TOBE: actual value
       interpolated_pose.pose.orientation.x = 0.;
       interpolated_pose.pose.orientation.y = 0.;
       interpolated_pose.pose.orientation.z = 0.;
@@ -147,48 +171,49 @@ void PathGenerator::linear_interpolate() {
 
   // Replace the path with the interpolated path
   path_.poses = interpolated_path;
+  ROS_INFO("point published!");
 }
 
-void PathGenerator::spline_path() {
-  nav_msgs::Path splined_path;
-  splined_path.header = path_.header;
+// void PathGenerator::spline_path() {
+//   nav_msgs::Path splined_path;
+//   splined_path.header = path_.header;
 
-  std::vector<double> x, y;
+//   std::vector<double> x, y;
 
-  // Extract x and y coordinates from path poses
-  for (const auto& pose : path_.poses) {
-    x.push_back(pose.pose.position.x);
-    y.push_back(pose.pose.position.y);
-  }
+//   // Extract x and y coordinates from path poses
+//   for (const auto& pose : path_.poses) {
+//     x.push_back(pose.pose.position.x);
+//     y.push_back(pose.pose.position.y);
+//   }
 
-  // Create a 2D spline
-  CubicSpline2D spline(x, y);
+//   // Create a 2D spline
+//   CubicSpline2D spline(x, y);
 
-  // Generate splined path points
-  double total_s = spline.calc_s(x, y).back();
-  double ds = 0.1; // Step size for spline sampling (adjust as needed)
+//   // Generate splined path points
+//   double total_s = spline.calc_s(x, y).back();
+//   double ds = 0.1; // Step size for spline sampling (adjust as needed)
     
-  for (double s = 0; s <= total_s; s += ds) {
-    auto [sx, sy] = spline.calc_position(s);
-    geometry_msgs::PoseStamped pose;
+//   for (double s = 0; s <= total_s; s += ds) {
+//     auto [sx, sy] = spline.calc_position(s);
+//     geometry_msgs::PoseStamped pose;
     
-    pose.header = path_.header;
-    pose.pose.position.x = sx;
-    pose.pose.position.y = sy;
-    pose.pose.position.z = 0.0;
+//     pose.header = path_.header;
+//     pose.pose.position.x = sx;
+//     pose.pose.position.y = sy;
+//     pose.pose.position.z = 0.0;
 
-    // Calculate yaw (orientation) using the spline's derivative
-    double yaw = spline.calc_yaw(s);
-    tf2::Quaternion q;
-    q.setRPY(0, 0, yaw);
-    pose.pose.orientation = tf2::toMsg(q);
+//     // Calculate yaw (orientation) using the spline's derivative
+//     double yaw = spline.calc_yaw(s);
+//     tf2::Quaternion q;
+//     q.setRPY(0, 0, yaw);
+//     pose.pose.orientation = tf2::toMsg(q);
 
-    splined_path.poses.push_back(pose);
-  }
+//     splined_path.poses.push_back(pose);
+//   }
 
   // Publish the splined path
-  path_pub_.publish(splined_path);
-}
+  // path_pub_.publish(splined_path);
+// }
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "path_generator_node");
