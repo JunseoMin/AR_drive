@@ -100,7 +100,7 @@ void PathTracker::stenly() {
 
   xycar_msgs::xycar_motor motor_msg;
   motor_msg.angle = control_steering;
-  motor_msg.speed = velocity_;
+  motor_msg.speed = 1.0;
 
   ROS_INFO("motor published (angle): %lf", control_steering);
   control_pub_.publish(motor_msg);

@@ -110,6 +110,7 @@ public:
   CubicSpline2D(const std::vector<double>& x, const std::vector<double>& y)
     : sx(calc_s(x, y), x), sy(calc_s(x, y), y) {
     s = calc_s(x, y);
+    ROS_INFO("spline2D initialize success");
   }
 
   std::vector<double> calc_s(const std::vector<double>& x, const std::vector<double>& y) {
@@ -181,7 +182,7 @@ void PathGenerator::get_coord() {
     // Transform pose to odom frame (assuming pose_stamped is originally in usb_cam frame)
     try {
       geometry_msgs::PoseStamped pose_in_odom;
-      tf_buffer_.transform(pose_stamped, pose_in_odom, "odom", ros::Duration(1.0));  // Transform to odom frame ㅅㅂ왜 이라인 안됨?
+      tf_buffer_.transform(pose_stamped, pose_in_odom, "odom", ros::Duration(1.0));  // Transform to odom frame
 
       pose_in_odom.pose.position.z = 0;
       
@@ -217,55 +218,14 @@ nav_msgs::Path PathGenerator::calc_path() {
 
   path_.header.frame_id = "odom";  // Set the frame to "odom"
   path_.header.stamp = ros::Time(0);
+
   ROS_INFO("header_set");
 
   if (path_.poses.empty()) {
     ROS_ERROR("empty path");
     return nav_msgs::Path();  // Return an empty path
   }
-
-  // Cubic interpolation
-  nav_msgs::Path interpolated_path;
-  interpolated_path.header = path_.header;
-
-  std::vector<double> x, y;
-  for (const auto& pose : path_.poses) {
-    x.push_back(pose.pose.position.x);
-    y.push_back(pose.pose.position.y);
-  }
-
-  CubicSpline2D spline(x, y);
-  double ds = 0.1;
-
-  std::vector<double> s_values;
-
-  for (double s = 0; s <= spline.calc_s(x, y).back(); s += ds) {
-    s_values.push_back(s);
-  }
-
-  for (const double s : s_values) {
-    auto [ix, iy] = spline.calc_position(s);
-    auto iyaw = spline.calc_yaw(s);
-
-    geometry_msgs::PoseStamped interpolated_pose;
-    interpolated_pose.header = path_.header;
-    interpolated_pose.pose.position.x = ix;
-    interpolated_pose.pose.position.y = iy;
-    interpolated_pose.pose.position.z = 0.0;
-
-    // Convert yaw to quaternion
-    tf2::Quaternion q;
-    q.setRPY(0, 0, iyaw);  // Roll and pitch are set to 0, yaw is set to iyaw
-
-    // Assign quaternion to pose orientation
-    interpolated_pose.pose.orientation.x = q.x();
-    interpolated_pose.pose.orientation.y = q.y();
-    interpolated_pose.pose.orientation.z = q.z();
-    interpolated_pose.pose.orientation.w = q.w();
-        
-    interpolated_path.poses.push_back(interpolated_pose);
-  }
-
+  
   ROS_INFO("path generated !!");
 
   // Publish path
