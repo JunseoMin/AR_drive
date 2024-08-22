@@ -28,6 +28,11 @@
 #include <ar_path_nav/spline.hpp>
 
 #include <cassert>
+
+// #include <Eigen/Core>
+#include <eigen3/Eigen/Dense>
+#include <eigen3/unsupported/Eigen/Splines>
+
 class PathGenerator
 {
 public:

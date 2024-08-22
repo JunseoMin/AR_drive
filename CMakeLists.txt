@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -37,6 +38,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${Eigen3_INCLUDE_DIRS}
 )
 
 add_executable(path_generator_node src/path_generator_node.cpp)
@@ -45,11 +47,13 @@ add_executable(path_tracker_node src/path_tracker_node.cpp)
 target_link_libraries(path_generator_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
+  Eigen3::Eigen
 )
 
 target_link_libraries(path_tracker_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
+  Eigen3::Eigen
 )
 
 #############

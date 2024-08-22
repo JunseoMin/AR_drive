@@ -98,11 +98,11 @@ nav_msgs::Path PathGenerator::calc_path() {
   // }
 
   set_points(); // set three points to make path
-  linear_interpolate();
-  set_orientation();
+  // linear_interpolate();
+  spline_path();  // spline and publish path
   path_pub_.publish(path_);
   ROS_INFO("path pub!");
-  // spline_path();  // spline and publish path
+
   return path_;
 }
 
@@ -128,13 +128,6 @@ void PathGenerator::set_points(){
   path_.poses.push_back(point_central_);
   path_.poses.push_back(point_margin_);
   ROS_INFO("point set !!");
-}
-
-void PathGenerator::set_orientation(){
-
-  for (auto& pose : path_.poses){
-    
-  }
 }
 
 void PathGenerator::linear_interpolate() {
@@ -187,46 +180,54 @@ void PathGenerator::linear_interpolate() {
   ROS_INFO("point published!");
 }
 
-// void PathGenerator::spline_path() {
-//   nav_msgs::Path splined_path;
-//   splined_path.header = path_.header;
+void PathGenerator::spline_path() {
+  if (path_.poses.size() < 2) {
+    ROS_ERROR("Not enough points for spline interpolation");
+    return;
+  }
 
-//   std::vector<double> x, y;
+  // Spline interpolation using Eigen
+  Eigen::MatrixXd points(2, path_.poses.size());
+  for (size_t i = 0; i < path_.poses.size(); ++i) {
+    points(0, i) = path_.poses[i].pose.position.x;
+    points(1, i) = path_.poses[i].pose.position.y;
+  }
 
-//   // Extract x and y coordinates from path poses
-//   for (const auto& pose : path_.poses) {
-//     x.push_back(pose.pose.position.x);
-//     y.push_back(pose.pose.position.y);
-//   }
+  Eigen::Spline<double, 2> spline = Eigen::SplineFitting<Eigen::Spline<double, 2>>::Interpolate(points, points.cols() - 1);
 
-//   // Create a 2D spline
-//   CubicSpline2D spline(x, y);
+  // Interpolated path
+  std::vector<geometry_msgs::PoseStamped> interpolated_path;
+  for (double t = 0.0; t <= 1.0; t += 1.0 / interpolate_param_) {
+    Eigen::Vector2d interpolated_point = spline(t);
 
-//   // Generate splined path points
-//   double total_s = spline.calc_s(x, y).back();
-//   double ds = 0.1; // Step size for spline sampling (adjust as needed)
-    
-//   for (double s = 0; s <= total_s; s += ds) {
-//     auto [sx, sy] = spline.calc_position(s);
-//     geometry_msgs::PoseStamped pose;
-    
-//     pose.header = path_.header;
-//     pose.pose.position.x = sx;
-//     pose.pose.position.y = sy;
-//     pose.pose.position.z = 0.0;
+    geometry_msgs::PoseStamped pose;
+    pose.header.frame_id = "odom";
+    pose.header.stamp = ros::Time::now();
+    pose.pose.position.x = interpolated_point.x();
+    pose.pose.position.y = interpolated_point.y();
+    pose.pose.position.z = 0.0;
 
-//     // Calculate yaw (orientation) using the spline's derivative
-//     double yaw = spline.calc_yaw(s);
-//     tf2::Quaternion q;
-//     q.setRPY(0, 0, yaw);
-//     pose.pose.orientation = tf2::toMsg(q);
+    interpolated_path.push_back(pose);
+  }
 
-//     splined_path.poses.push_back(pose);
-//   }
+  // Orientation calculation
+  for (size_t i = 0; i < interpolated_path.size() - 1; ++i) {
+    double dx = interpolated_path[i + 1].pose.position.x - interpolated_path[i].pose.position.x;
+    double dy = interpolated_path[i + 1].pose.position.y - interpolated_path[i].pose.position.y;
+    double yaw = std::atan2(dy, dx);
 
-  // Publish the splined path
-  // path_pub_.publish(splined_path);
-// }
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw);
+    interpolated_path[i].pose.orientation = tf2::toMsg(q);
+  }
+
+  if (!interpolated_path.empty()) {
+    interpolated_path.back().pose.orientation = interpolated_path[interpolated_path.size() - 2].pose.orientation;
+  }
+
+  path_.poses = interpolated_path;
+  ROS_INFO("Spline path generated and published!");
+}
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "path_generator_node");
