@@ -84,6 +84,7 @@ nav_msgs::Path PathGenerator::calc_path() {
   get_coord();
 
   if(error_flag_){
+    ROS_ERROR("empty path");
     ROS_WARN("tf error");
     return path_;
   }
@@ -98,7 +99,7 @@ nav_msgs::Path PathGenerator::calc_path() {
 
   set_points(); // set three points to make path
   linear_interpolate();
-
+  set_orientation();
   path_pub_.publish(path_);
   ROS_INFO("path pub!");
   // spline_path();  // spline and publish path
@@ -129,6 +130,13 @@ void PathGenerator::set_points(){
   ROS_INFO("point set !!");
 }
 
+void PathGenerator::set_orientation(){
+
+  for (auto& pose : path_.poses){
+    
+  }
+}
+
 void PathGenerator::linear_interpolate() {
   if (path_.poses.size() < 2) {
     ROS_ERROR("Not enough points to interpolate");
@@ -157,12 +165,17 @@ void PathGenerator::linear_interpolate() {
 
       //TODO: add orientation
       //ASIS - static trash value TOBE: actual value
-      interpolated_pose.pose.orientation.x = 0.;
-      interpolated_pose.pose.orientation.y = 0.;
-      interpolated_pose.pose.orientation.z = 0.;
-      interpolated_pose.pose.orientation.w = 1.;
+      // Interpolate orientation (if needed)
+
+      tf2::Quaternion q_start, q_end, q_interpolated;
+      tf2::fromMsg(start_pose.pose.orientation, q_start);
+      tf2::fromMsg(end_pose.pose.orientation, q_end);
+
+      q_interpolated = q_start.slerp(q_end, static_cast<double>(j) / interpolate_param_);
+      interpolated_pose.pose.orientation = tf2::toMsg(q_interpolated);
 
       interpolated_path.push_back(interpolated_pose);
+
     }
   }
 

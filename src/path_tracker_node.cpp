@@ -2,7 +2,7 @@
 #include <tf/transform_datatypes.h>  // To use for quaternion to yaw conversion
 
 PathTracker::PathTracker(ros::NodeHandle nh_)
-: nh_(nh_), priv_nh_("~"), velocity_(1.0), k_(1.0)
+: nh_(nh_), priv_nh_("~"), velocity_(1.0), k_(2.0)
 {
   path_subs_ = nh_.subscribe("/ar_path", 10, &PathTracker::path_callback, this);
   control_pub_ = nh_.advertise<xycar_msgs::xycar_motor>("/xycar_motor", 10);
@@ -79,6 +79,8 @@ void PathTracker::stenly() {
 
   double heading_to_goal = std::atan2(dy, dx);
 
+  velocity_ = 3.0;
+
   tf::Quaternion q(
       curr_ori_.x,
       curr_ori_.y,
@@ -97,12 +99,23 @@ void PathTracker::stenly() {
   }
 
   double control_steering = heading_error + std::atan2(k_ * cross_track_error, velocity_);
+  // steering (0 ~ 50)  // maximum degree 50
+
+  double steering_degree = control_steering * 57.296;
+
+  if (steering_degree > 50){
+    steering_degree = 50.;
+  }
+
+  if (steering_degree < -50){
+    steering_degree = -50.;
+  }
 
   xycar_msgs::xycar_motor motor_msg;
-  motor_msg.angle = control_steering;
-  motor_msg.speed = 1.0;
+  motor_msg.angle = steering_degree;
+  motor_msg.speed = velocity_;
 
-  ROS_INFO("motor published (angle): %lf", control_steering);
+  ROS_INFO("motor published (angle): %lf", steering_degree);
   control_pub_.publish(motor_msg);
 }
 
