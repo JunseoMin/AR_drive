@@ -44,6 +44,7 @@ private:
   void set_points();
   void linear_interpolate();
   void spline_path();
+  void check_pub();
 
   nav_msgs::Path calc_path();
 
@@ -73,6 +74,9 @@ private:
   int interpolate_param_;
 
   bool error_flag_;
+  bool flag_pub_;
+
+  int prev_marker_id_;
 };
 
 #endif  // AR_PATH_NAV__PATH_GENERATOR_NODE_H_

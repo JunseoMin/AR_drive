@@ -7,6 +7,7 @@ PathGenerator::PathGenerator(ros::NodeHandle nh_)
   ar_subs_ = nh_.subscribe<ar_track_alvar_msgs::AlvarMarkers>("/ar_pose_marker", 10, &PathGenerator::ar_callback, this);
   path_pub_ = nh_.advertise<nav_msgs::Path>("/ar_path", 10);
 
+  close_marker_.header.frame_id = "notpublished";
 }
 
 void PathGenerator::ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr& msg) {
@@ -18,11 +19,21 @@ void PathGenerator::ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPt
   }
 
   ar_marks_ = msg->markers;
-  calc_path();
+
+  check_pub();
+  get_coord();  // get closest_mark_, current tf
+
+  if (flag_pub_){
+    path_.poses.clear();
+    path_pub_.publish(calc_path()); // update path and publish new path
+  }
+  else{
+    path_pub_.publish(path_);
+  }
+
 }
 
 void PathGenerator::get_coord() {
-  path_.poses.clear();
   ROS_INFO("get coord start!!");
   
   double min_distance = std::numeric_limits<double>::infinity();
@@ -32,7 +43,7 @@ void PathGenerator::get_coord() {
     double dy = marker.pose.pose.position.y;
     double distance = std::sqrt(dx * dx + dy * dy);
 
-    if (min_distance > distance){
+    if (min_distance > distance && distance > 0.2){
       min_distance = distance;
       close_marker_ = marker;
     }
@@ -78,10 +89,35 @@ void PathGenerator::get_coord() {
   }
 }
 
+void PathGenerator::check_pub(){
+  if(close_marker_.confidence < 60){
+    flag_pub_ = false;
+    return;
+  }
+  
+  if(close_marker_.header.frame_id == "notpublished"){
+    flag_pub_ = true;
+  }
+  
+  const double curr_makr_x = pose_marker_odom_.pose.position.x;
+  const double curr_makr_y = pose_marker_odom_.pose.position.y;
+
+  double curr_base_x = T_ob_.transform.translation.x;
+  double curr_base_y = T_ob_.transform.translation.y;
+
+  int current_marker_id = close_marker_.id;
+
+  if (prev_marker_id_ == current_marker_id) {
+    ROS_INFO("Marker ID changed: previous ID = %d, current ID = %d", prev_marker_id_, current_marker_id);
+    flag_pub_ = false; 
+    prev_marker_id_ = current_marker_id;
+    return;
+  }
+}
+
 nav_msgs::Path PathGenerator::calc_path() {
   // path_ => odom referenced AR poses
   // T_ob_ odom -> base_link transform
-  get_coord();
 
   if(error_flag_){
     ROS_ERROR("empty path");
@@ -92,17 +128,10 @@ nav_msgs::Path PathGenerator::calc_path() {
   path_.header.frame_id = "odom";  // Set the frame to "odom"
   path_.header.stamp = ros::Time(0);
 
-  // if (path_.poses.empty()) {
-  //   ROS_ERROR("empty path");
-  //   return nav_msgs::Path();  // Return an empty path
-  // }
-
   set_points(); // set three points to make path
   // linear_interpolate();
   spline_path();  // spline and publish path
-  path_pub_.publish(path_);
-  ROS_INFO("path pub!");
-
+  
   return path_;
 }
 
