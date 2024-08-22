@@ -40,10 +40,14 @@ public:
 
 private:
   void ar_callback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr& msg);
-  void get_coord();
+  void get_closest_marker();
+
+  void set_margin();
   void set_points();
+
   void linear_interpolate();
   void spline_path();
+
   void check_pub();
 
   nav_msgs::Path calc_path();
@@ -64,8 +68,10 @@ private:
 
   ar_track_alvar_msgs::AlvarMarker close_marker_;
 
-  geometry_msgs::PoseStamped pose_marker_odom_;
-  geometry_msgs::TransformStamped T_ob_;
+  // geometry_msgs::PoseStamped pose_marker_odom_;
+  // geometry_msgs::TransformStamped T_ob_;
+
+  geometry_msgs::PoseStamped pose_margin_marker_;
 
   geometry_msgs::PoseStamped point_margin_;
   geometry_msgs::PoseStamped point_central_;
@@ -77,6 +83,7 @@ private:
   bool flag_pub_;
 
   int prev_marker_id_;
+  std::string frame_id_;
 };
 
 #endif  // AR_PATH_NAV__PATH_GENERATOR_NODE_H_

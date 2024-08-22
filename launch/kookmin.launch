@@ -25,7 +25,7 @@
   </node>
 
   <node name="path_generator" pkg="ar_path_nav" type="path_generator_node" output="screen"/>
-  <node name="controller" pkg="lattice_planner" type="pure_pursuit.py" output="screen"/>
+  <!-- <node name="controller" pkg="lattice_planner" type="pure_pursuit.py" output="screen"/> -->
 
   <node pkg="rf2o_laser_odometry" type="rf2o_laser_odometry_node" name="rf2o_laser_odometry" output="screen">
     <param name="laser_scan_topic" value="/scan"/>        # topic where the lidar scans are being published
