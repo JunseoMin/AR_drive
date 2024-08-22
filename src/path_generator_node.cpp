@@ -141,12 +141,12 @@ nav_msgs::Path PathGenerator::calc_path() {
 void PathGenerator::set_points(){
   // use base_link, margined AR pose, center of AR pose and base_link
   
-  // base_link point 마커 기준 base_link 좌표
-  point_baselink_.pose.position.x = -close_marker_.pose.pose.position.x;  // usb cam 기준임
+  // base_link point
+  point_baselink_.pose.position.x = -close_marker_.pose.pose.position.x;  // usb cam reference
   point_baselink_.pose.position.y = -close_marker_.pose.pose.position.y;
   point_baselink_.pose.position.z = 0.;
 
-  // marker point 현상태 유지
+  // marker point
   point_margin_.pose.position.x = pose_margin_marker_.pose.position.x;
   point_margin_.pose.position.y = pose_margin_marker_.pose.position.y;
   point_margin_.pose.position.z = 0.;
