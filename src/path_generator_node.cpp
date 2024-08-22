@@ -43,7 +43,7 @@ void PathGenerator::get_coord() {
     double dy = marker.pose.pose.position.y;
     double distance = std::sqrt(dx * dx + dy * dy);
 
-    if (min_distance > distance && distance > 0.2){
+    if (min_distance > distance){
       min_distance = distance;
       close_marker_ = marker;
     }
@@ -90,26 +90,25 @@ void PathGenerator::get_coord() {
 }
 
 void PathGenerator::check_pub(){
-  if(close_marker_.confidence < 60){
-    flag_pub_ = false;
+  if(close_marker_.header.frame_id == "notpublished"){
+    ROS_INFO("====================");
+    ROS_INFO("initial publish set!");
+    ROS_INFO("====================");
+    flag_pub_ = true;
     return;
   }
-  
-  if(close_marker_.header.frame_id == "notpublished"){
-    flag_pub_ = true;
-  }
-  
-  const double curr_makr_x = pose_marker_odom_.pose.position.x;
-  const double curr_makr_y = pose_marker_odom_.pose.position.y;
-
-  double curr_base_x = T_ob_.transform.translation.x;
-  double curr_base_y = T_ob_.transform.translation.y;
 
   int current_marker_id = close_marker_.id;
 
   if (prev_marker_id_ == current_marker_id) {
-    ROS_INFO("Marker ID changed: previous ID = %d, current ID = %d", prev_marker_id_, current_marker_id);
+    ROS_INFO("++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+    ROS_INFO("Marker ID not changed: previous ID = %d, current ID = %d", prev_marker_id_, current_marker_id);
+    ROS_INFO("++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     flag_pub_ = false; 
+    return;
+  }
+  else{
+    flag_pub_ = true; 
     prev_marker_id_ = current_marker_id;
     return;
   }
@@ -149,8 +148,8 @@ void PathGenerator::set_points(){
   point_margin_.pose.position.y = pose_marker_odom_.pose.position.y;
   point_margin_.pose.position.z = 0.;
 
-  point_central_.pose.position.x = (point_baselink_.pose.position.x + close_marker_.pose.pose.position.x)/2;
-  point_central_.pose.position.y = (point_baselink_.pose.position.y + close_marker_.pose.pose.position.y)/2;
+  point_central_.pose.position.x = (point_baselink_.pose.position.x * (0.95) + (1.05) * close_marker_.pose.pose.position.x)/2;
+  point_central_.pose.position.y = (point_baselink_.pose.position.y * (0.95) + (1.05) * close_marker_.pose.pose.position.y)/2;
   point_central_.pose.position.z = 0;
 
   path_.poses.push_back(point_baselink_);
@@ -185,8 +184,7 @@ void PathGenerator::linear_interpolate() {
       interpolated_pose.pose.position.z = start_pose.pose.position.z +
                                           j * (end_pose.pose.position.z - start_pose.pose.position.z) / interpolate_param_;
 
-      //TODO: add orientation
-      //ASIS - static trash value TOBE: actual value
+      // TODO: add orientation
       // Interpolate orientation (if needed)
 
       tf2::Quaternion q_start, q_end, q_interpolated;

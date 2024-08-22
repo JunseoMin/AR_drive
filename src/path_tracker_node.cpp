@@ -7,7 +7,7 @@ PathTracker::PathTracker(ros::NodeHandle nh_)
   path_subs_ = nh_.subscribe("/ar_path", 10, &PathTracker::path_callback, this);
   control_pub_ = nh_.advertise<xycar_msgs::xycar_motor>("/xycar_motor", 10);
 
-  timer_ = nh_.createTimer(ros::Duration(0.1), &PathTracker::timer_callback, this);
+  timer_ = nh_.createTimer(ros::Duration(1.), &PathTracker::timer_callback, this);
 
   odom_subs_ = nh_.subscribe("/odom", 10, &PathTracker::odom_callback, this);
 }
@@ -28,7 +28,7 @@ void PathTracker::timer_callback(const ros::TimerEvent&) {
     ROS_WARN("Received empty path, skipping this cycle.");
     return;
   }
-  ROS_INFO("timer callback start!");
+  // ROS_INFO("timer callback start!");
   set_goal();
   stenly();
 }
@@ -41,22 +41,16 @@ void PathTracker::set_goal() {
     goal_idx = path_.poses.size() - 1;
   }
 
-  if (goal_idx < goal_prev_ ){
-    goal_idx = goal_prev_ + 1;
-  }
-
-  goal_prev_ = goal_idx;
-
   goal_pose_ = path_.poses[goal_idx].pose;
   ROS_INFO("********************************", goal_idx);
   ROS_INFO("goal pose set!! idx: %d", goal_idx);
   ROS_INFO("goal pose set!! x: %lf y: %lf", path_.poses[goal_idx].pose.position.x,path_.poses[goal_idx].pose.position.y);
+  ROS_INFO("current x: %f current y: %f", curr_x_, curr_y_);
 }
 
 int PathTracker::get_closest_idx() {
   double min_dist = std::numeric_limits<double>::max();
   int closest_idx = 0;
-  ROS_INFO("current x: %f current y: %f", curr_x_, curr_y_);
 
   for (size_t i = 0; i < path_.poses.size(); ++i) {
     double dx = curr_x_ - path_.poses[i].pose.position.x;
@@ -74,26 +68,42 @@ int PathTracker::get_closest_idx() {
 }
 
 void PathTracker::stenly() {
+  ROS_INFO("**********STENLY****************");
+
   double dx = goal_pose_.position.x - curr_x_;
   double dy = goal_pose_.position.y - curr_y_;
 
-  double heading_to_goal = std::atan2(dy, dx);
-
   velocity_ = 3.0;
 
-  tf::Quaternion q(
+  tf::Quaternion q_curr(
       curr_ori_.x,
       curr_ori_.y,
       curr_ori_.z,
       curr_ori_.w);
-  tf::Matrix3x3 m(q);
+  tf::Matrix3x3 m_curr(q_curr);
 
-  double roll, pitch, yaw;
-  m.getRPY(roll, pitch, yaw);
+  double roll, pitch, yaw_curr;
+  m_curr.getRPY(roll, pitch, yaw_curr);
 
-  double heading_error = heading_to_goal - yaw;
+  tf::Quaternion q_goal(
+      goal_pose_.orientation.x,
+      goal_pose_.orientation.y,
+      goal_pose_.orientation.z,
+      goal_pose_.orientation.w);
+  tf::Matrix3x3 m_goal(q_goal);
+
+  double yaw_goal;  
+  m_goal.getRPY(roll, pitch, yaw_goal);
+
+  ROS_ERROR("yaw goal: %f", yaw_goal);
+  ROS_ERROR("yaw curr: %f", yaw_curr);
+
+  double heading_error = yaw_goal - yaw_curr;
   double cross_track_error = std::sqrt(dx * dx + dy * dy);
-  
+
+  ROS_WARN("heading error: %f", heading_error);
+  ROS_WARN("cross track error: %f", cross_track_error);
+
   if (heading_error < 0) {
     cross_track_error = -cross_track_error;
   }
