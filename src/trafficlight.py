@@ -225,13 +225,13 @@ class TrafficLight:
             print("------------------")
 
             if green_ratio > threshold:
-                rospy.loginfo("Green light detected! Ending process.")
+                rospy.loginfo("green light detected! Ending process.")
                 self.trafficlight_end = True
             else:
-                rospy.loginfo("No green light detected.")
+                rospy.loginfo("no green light detected.")
 
         except Exception as e:
-            rospy.logerr("Error in processing image: %s", str(e))
+            rospy.logerr("error in processing image: %s", str(e))
 
 
 if __name__ == '__main__':
