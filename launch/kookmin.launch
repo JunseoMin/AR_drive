@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <node pkg="tf" type="static_transform_publisher" name="tf" args="0.2 0 0.05 -1.57 0 - 1.57 base_link usb_cam 10"/>
+  <node pkg="tf" type="static_transform_publisher" name="tf" args="0 0 0 0 0 0 base_link usb_cam 10"/>
 
   	<!-- motor node -->
   <!-- <include file="$(find xycar_motor)/launch/xycar_motor.launch" /> -->
@@ -24,10 +24,10 @@
     <remap from="camera_info"   to="/usb_cam/camera_info" />
   </node>
 
-  <node name="path_generator" pkg="ar_path_nav" type="path_generator_node" output="screen"/>
+  <!-- <node name="path_generator" pkg="ar_path_nav" type="path_generator_node" output="screen"/> -->
   <!-- <node name="controller" pkg="lattice_planner" type="pure_pursuit.py" output="screen"/> -->
 
-  <node pkg="rf2o_laser_odometry" type="rf2o_laser_odometry_node" name="rf2o_laser_odometry" output="screen">
+  <!-- <node pkg="rf2o_laser_odometry" type="rf2o_laser_odometry_node" name="rf2o_laser_odometry" output="screen">
     <param name="laser_scan_topic" value="/scan"/>        # topic where the lidar scans are being published
     <param name="odom_topic" value="/odom" />              # topic where tu publish the odometry estimations
     <param name="publish_tf" value="true" />                   # wheter or not to publish the tf::transform (base->odom)
@@ -36,6 +36,6 @@
     <param name="init_pose_from_topic" value="" /> # (Odom topic) Leave empty to start at point (0,0)
     <param name="freq" value="6.0"/>                            # Execution frequency.
     <param name="verbose" value="true" />                       # verbose
-  </node>
+  </node> -->
 
 </launch>
