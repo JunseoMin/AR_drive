@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import rospy 
@@ -11,7 +12,7 @@ from tf.transformations import euler_from_quaternion
 from ar_track_alvar_msgs.msg import AlvarMarkers
 from xycar_msgs.msg import xycar_motor
 import time
-
+import os
 
 def Can2BaseT():
     
@@ -69,10 +70,26 @@ class ArDriving:
         self.cmd_msg = xycar_motor()
 
         self.init = True
+        self.start_node = False
 
-        rate = rospy.Rate(30)
+        self.stop_flag = 0
+
+        rate = rospy.Rate(10)
 
         while not rospy.is_shutdown():
+            node_list = os.popen("rosnode list").read().splitlines()
+
+            if "/trafficlight_node" in node_list:
+                rospy.loginfo("!waiting trafficlight!")
+                continue
+            self.start_node = True
+            
+            # rospy.loginfo("=======================================")
+            rospy.loginfo("=======================================")
+            rospy.loginfo("===========drive node start!===========")
+            # rospy.loginfo("=======================================")
+            # rospy.loginfo("=======================================")
+                
             if self.is_ar and self.is_odom:
 
                 target_ar_pointstamped = PointStamped()
@@ -82,7 +99,10 @@ class ArDriving:
                 odom_ar_pointstamped.header.frame_id = 'odom'
 
                 if len(self.ar_list) == 0:
+                    self.stop_flag += 1
                     print("no ar mark!")
+                    print("???????????????")
+                    print("stop_flag: ",self.stop_flag)
                     
                 else:
                     target_ar = self.find_target_ar()   
@@ -109,7 +129,7 @@ class ArDriving:
                 self.update_cmd()
                 self.ar_point_pub.publish(odom_ar_pointstamped)
 
-                if self.ar_flag == 2:
+                if self.ar_flag == 3:
                     if self.init:
                         self.cmd_msg.angle = -30
                         self.init = False
@@ -123,7 +143,12 @@ class ArDriving:
 
 
                 self.cmd_pub.publish(self.cmd_msg)
-            
+
+            if self.stop_flag > 15:
+                rospy.loginfo("============drive node end!============")
+                rospy.loginfo("=======================================")
+                rospy.signal_shutdown()
+
             rate.sleep()
 
     def pid_distance(self):
@@ -170,7 +195,6 @@ class ArDriving:
         return u
 
     def update_cmd(self):
-        
         if len(self.ar_list) == 0:
             print("just go straight")
             self.cmd_msg.speed = 3
@@ -203,6 +227,7 @@ class ArDriving:
             )
 
     def odom_callback(self, msg):
+        
         self.is_odom = True
         self.cur_odom = msg.pose.pose.position
         orient = msg.pose.pose.orientation
@@ -210,6 +235,9 @@ class ArDriving:
         # print(self.odom_yaw * 180.0 / math.pi)
 
     def ar_callback(self, msg):
+        if not self.start_node:
+            return
+
         self.is_ar = True
         ar_list = []
         for ar in msg.markers:
@@ -231,18 +259,17 @@ class ArDriving:
             self.last_marker_ts = ar.header.stamp
 
         target_ar = self.ar_list[min_idx]
-        print(len(self.ar_list))
-        print("current target :",target_ar.id )
         distance_diff = abs(self.dist_before - min_dist) 
+        
+        print("----------------")
+        print("distance diff: ", distance_diff)
+        print("----------------")
 
-        if distance_diff > 1.:
+        if distance_diff > 1.5 and 3.5 > distance_diff:
             self.ar_flag += 1
         
         self.dist_before = min_dist
 
-        # odom_quaternion=(target_ar.pose.pose.orientation.x,target_ar.pose.pose.orientation.y,target_ar.pose.pose.orientation.z,target_ar.pose.pose.orientation.w)
-        # roll,pitch,yaw=euler_from_quaternion(odom_quaternion)
-        # print(target_ar.id, roll/math.pi*180,pitch/math.pi*180 ,yaw/math.pi*180 )
         return target_ar
 
 if __name__ == '__main__':

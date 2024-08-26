@@ -31,7 +31,7 @@ def Cam2BaseT():
 
 class TrafficLight:
     def __init__(self):
-        rospy.init_node('trafficlight_node', anonymous=True)
+        rospy.init_node('trafficlight_node', anonymous=False)
 
         rospy.Subscriber("/ar_pose_marker",AlvarMarkers, self.ar_callback)
         rospy.Subscriber("/usb_cam/image_raw",Image, self.image_callback)
@@ -104,6 +104,8 @@ class TrafficLight:
             if self.distance < 1.5:
                 rospy.loginfo("arrived!! distance: %d", self.distance)
                 self.arrived = True
+
+
             rate.sleep()
     
     def ar_callback(self,msg):
@@ -117,7 +119,7 @@ class TrafficLight:
 
     def image_callback(self,msg):
         self.img_curr = msg
-        rospy.loginfo("image subscribed")
+        # rospy.loginfo("image subscribed")
     
     def update_target_marker(self):
         print(self.markers)
@@ -140,12 +142,14 @@ class TrafficLight:
             print("closest marker update! distance: ", math.sqrt(min_distance))
             print("********************************")
         
-
-
     def update_target_pose(self):
         # get ar pose referenced to baselink
         if self.goal_marker.id == '':
+            # rospy.logwarn("????????????")
             rospy.logwarn("No marker!!")
+            # self.stop_flag+=1
+            # print(self.stop_flag)
+            # rospy.logwarn("????????????")
             return
 
         tmp_pose = np.array([self.goal_marker.pose.pose.position.x,self.goal_marker.pose.pose.position.y,self.goal_marker.pose.pose.position.z,1]).T
@@ -173,7 +177,7 @@ class TrafficLight:
         
         self.heading_pid_error_1 = error
         self.heading_pid_ui_1 = ui
-        print("angle: ", u / math.pi * 180)
+        print("angle: ", int(u / math.pi * 180))
 
         self.motor_msg.angle = int(u / math.pi * 180)
     
@@ -197,14 +201,19 @@ class TrafficLight:
         self.distance_pid_error_1 = error
         self.distance_pid_ui_1 = ui
 
-        print("speed: ", int(u + 3.0) )
-        self.motor_msg.speed = int(u + 3.0)
+        if u > 4.5:
+            u = 4
+        if 3 > u:
+            u = 3
+
+        print("speed: ", int(u) )
+        self.motor_msg.speed = int(u)
     
     def check_greenlight(self):
         try:
             cv_image = np.frombuffer(self.img_curr.data, dtype=np.uint8).reshape(self.img_curr.height, self.img_curr.width, -1)
             cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
-            cv2.imshow("original image",cv_image)
+            # cv2.imshow("original image",cv_image)
 
             height, width, _ = cv_image.shape
             top_part = cv_image[0:height // 3, :, :]
@@ -214,8 +223,8 @@ class TrafficLight:
             upper_green = np.array([80, 255, 255])
             mask = cv2.inRange(hsv, lower_green, upper_green)
 
-            cv2.imshow("greenmask img",mask)
-            cv2.waitKey(0)
+            # cv2.imshow("greenmask img",mask)
+            # cv2.waitKey(0)
 
             green_ratio = np.sum(mask > 0) / (mask.shape[0] * mask.shape[1])
 
