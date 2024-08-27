@@ -206,7 +206,7 @@ class ArDriving:
 
         ang_cmd = ang_cmd * 180 / math.pi
 
-        angle_list = [-20, -20, -30, -30, -50, -50,]
+        angle_list = [-30, -25, -30, -30, -50, -50,]    #1 
          
         if self.marker_distance < 1.:
             start_time = rospy.Time.now()
