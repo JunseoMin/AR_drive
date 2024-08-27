@@ -94,7 +94,7 @@ class TrafficLight:
             # upper_green = np.array([90, 255, 255])
  
             lower_green = np.array([60, 60, 100])
-            upper_green = np.array([87, 255, 255])  ## final value!
+            upper_green = np.array([87, 255, 255])  ## final value! (full screen 0.002)
             mask = cv2.inRange(hsv, lower_green, upper_green)
             
             cv2.imshow("Original Image", cv_image)
@@ -103,7 +103,7 @@ class TrafficLight:
 
             green_ratio = np.sum(mask > 0) / (mask.shape[0] * mask.shape[1])
 
-            threshold = 100  # Ratio threshold (adjust as needed)
+            threshold = 0.0017  # Ratio threshold (adjust as needed)
 
             print("------------------")
             print("Current green ratio: ", green_ratio)
