@@ -218,14 +218,14 @@ class ArDriving:
                 
                 while rospy.Time.now() - start_time < rospy.Duration(0.5):
 
-                    self.cmd_msg.angle =  int(-30)
+                    self.cmd_msg.angle =  int(-50)
 
                     self.cmd_msg.speed = 3
                     self.cmd_pub.publish(self.cmd_msg)
 
                     rospy.sleep(0.1)  # Sleep for a short duration to avoid spamming
                 
-                while rospy.Time.now() - start_time < rospy.Duration(0.5):
+                while rospy.Time.now() - start_time < rospy.Duration(1):
 
                     self.cmd_msg.angle =  50
 
@@ -234,6 +234,7 @@ class ArDriving:
 
                     rospy.sleep(0.1)  # Sleep for a short duration to av
                 
+                self.ar_flag += 1
                 
                 return
             else:
@@ -251,8 +252,8 @@ class ArDriving:
                     rospy.sleep(0.1)  # Sleep for a short duration to avoid spamming
 
                 
-            self.ar_flag += 1
-            return
+                self.ar_flag += 1
+                return
 
         if ang_cmd > 50:
             ang_cmd = 50
