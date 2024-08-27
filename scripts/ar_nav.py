@@ -33,7 +33,7 @@ def Can2BaseT():
 
 class ArDriving:
     def __init__(self):
-        rospy.init_node('ar_drive', anonymous=True)
+        rospy.init_node('ar_drive', anonymous=False)
         self.ar_flag = 0
 
         self.distance_diff = 0.0
