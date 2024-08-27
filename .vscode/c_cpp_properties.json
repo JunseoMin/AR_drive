@@ -1,0 +1,49 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/xytron/xycar_ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/xytron/xycar_ws/src/navigation/amcl/include/**",
+        "/home/xytron/xycar_ws/src/AR_drive/include/**",
+        "/home/xytron/xycar_ws/src/ar_track_alvar/ar_track_alvar/include/**",
+        "/home/xytron/xycar_ws/src/navigation/base_local_planner/include/**",
+        "/home/xytron/xycar_ws/src/navigation/carrot_planner/include/**",
+        "/home/xytron/xycar_ws/src/navigation/clear_costmap_recovery/include/**",
+        "/home/xytron/xycar_ws/src/navigation/costmap_2d/include/**",
+        "/home/xytron/xycar_ws/src/navigation/dwa_local_planner/include/**",
+        "/home/xytron/xycar_ws/src/study/ex_urdf/include/**",
+        "/home/xytron/xycar_ws/src/final_v1/include/**",
+        "/home/xytron/xycar_ws/src/final_v2/include/**",
+        "/home/xytron/xycar_ws/src/navigation/global_planner/include/**",
+        "/home/xytron/xycar_ws/src/kookmin/include/**",
+        "/home/xytron/xycar_ws/src/kookmin_2024/include/**",
+        "/home/xytron/xycar_ws/src/laser_filters/include/**",
+        "/home/xytron/xycar_ws/src/navigation/map_server/include/**",
+        "/home/xytron/xycar_ws/src/navigation/move_base/include/**",
+        "/home/xytron/xycar_ws/src/navigation/move_slow_and_clear/include/**",
+        "/home/xytron/xycar_ws/src/navigation/nav_core/include/**",
+        "/home/xytron/xycar_ws/src/navigation/navfn/include/**",
+        "/home/xytron/xycar_ws/src/orb_slam3_ros/include/**",
+        "/home/xytron/xycar_ws/src/rf2o_laser_odometry/include/**",
+        "/home/xytron/xycar_ws/src/robot_localization/include/**",
+        "/home/xytron/xycar_ws/src/navigation/rotate_recovery/include/**",
+        "/home/xytron/xycar_ws/src/xycar_device/usb_cam/include/**",
+        "/home/xytron/xycar_ws/src/xycar_device/vesc/vesc_ackermann/include/**",
+        "/home/xytron/xycar_ws/src/xycar_device/vesc/vesc_driver/include/**",
+        "/home/xytron/xycar_ws/src/navigation/voxel_grid/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

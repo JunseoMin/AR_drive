@@ -23,7 +23,7 @@ def Can2BaseT():
     rotYaw = np.array([cosY,-sinY,0, sinY,cosY,0, 0,0,1]).reshape(3,3)
     
     rotMat = rotYaw@rotRoll
-    
+     
     cam_trans = np.array([[0.2, 0, 0.05]])
     Tr_cam_to_vehicle = np.concatenate((rotMat,cam_trans.T),axis = 1)
     Tr_cam_to_vehicle = np.insert(Tr_cam_to_vehicle, 3, values=[0,0,0,1],axis = 0)
@@ -34,7 +34,7 @@ def Can2BaseT():
 class ArDriving:
     def __init__(self):
         rospy.init_node('ar_drive', anonymous=True)
-        self.ar_flag = -1
+        self.ar_flag = 0
 
         self.distance_diff = 0.0
         self.dist_before = 0.0
@@ -54,7 +54,7 @@ class ArDriving:
         self.ar_list = []
         self.target_ar = None
         self.target_x_offset = 0.0
-        self.target_y_offset = 0.5
+        self.target_y_offset = 0.3
         self.odom_yaw = 0
         self.ar_ids = []
         self.tmp_id = -1
@@ -113,7 +113,7 @@ class ArDriving:
                     target_x = base_ar_pose[0] + self.target_x_offset
                     target_y = base_ar_pose[1] + self.target_y_offset
 
-                    ar_yaw = math.atan(target_y / target_x)
+                    ar_yaw = math.atan2(target_y, target_x)
                     distance = sqrt(target_x ** 2 + target_y ** 2)
 
                     self.odom_ar_point = Point()
@@ -125,24 +125,22 @@ class ArDriving:
 
                     self.update_marker_angle_distance()
                 
-                print("current flag:", self.ar_flag)
+                # print("current flag:", self.ar_flag)
                 self.update_cmd()
                 self.ar_point_pub.publish(odom_ar_pointstamped)
 
-                if self.ar_flag == 3:
-                    if self.init:
-                        self.cmd_msg.angle = -30
-                        self.init = False
-                        rospy.logwarn("!! Second flag !!")
-                        rospy.logwarn("!! angle : -30 !!")
+                # if self.ar_flag == 3:
+                #     if self.init:
+                #         self.cmd_msg.angle = -45
+                #         self.init = False
+                #         rospy.logwarn("!! Second flag !!")
+                #         rospy.logwarn("!! angle : -30 !!")
 
-                        start_time = rospy.Time.now()
-                        while rospy.Time.now() - start_time < rospy.Duration(1.5):
-                            self.cmd_pub.publish(self.cmd_msg)
-                            rospy.sleep(0.1)  # Sleep for a short duration to avoid spamming
+                #         start_time = rospy.Time.now()
+                #         while rospy.Time.now() - start_time < rospy.Duration(1.5):
+                #             self.cmd_pub.publish(self.cmd_msg)
+                #             rospy.sleep(0.1)  # Sleep for a short duration to avoid spamming
 
-
-                self.cmd_pub.publish(self.cmd_msg)
 
             if self.stop_flag > 15:
                 rospy.loginfo("============drive node end!============")
@@ -173,25 +171,26 @@ class ArDriving:
 
         # rospy.loginfo(f"ARTag_distance: {self.marker_distance}")
 
-        print(u)
+        # print(u)
         return u
     
     def pid_heading(self):
         # PID controller to control the angular velocity based on heading
         ts = 0.8
-        kp = 0.1
-        ki = 0.20
+        kp = 0.2
+        ki = 0.001
         kd = 1.2
+
         error = self.marker_angle
 
         up = kp*error
-        ui = ki*error + self.heading_pid_ui_1*ts
-        ud = (kd/ts)*(error-self.heading_pid_error_1)
+        ui = ki*(error + self.heading_pid_ui_1)
+        ud = kd*(error-self.heading_pid_error_1)
         u = up + ui + ud
-
+        
         self.heading_pid_error_1 = error
-        self.heading_pid_ui_1 = ui
-        print("angle: ", u / math.pi * 180)
+        self.heading_pid_ui_1 += error
+
         return u
 
     def update_cmd(self):
@@ -201,13 +200,59 @@ class ArDriving:
             self.cmd_msg.angle = int(0.0)
             return
 
-        lin_cmd = self.pid_distance()
+        # lin_cmd = self.pid_distance()
+        lin_cmd = 4
         ang_cmd = self.pid_heading()
 
         ang_cmd = ang_cmd * 180 / math.pi
 
-        if self.marker_distance < 1:
-            ang_cmd += 25
+        angle_list = [-20, -20, -30, -30, -50, -50,]
+         
+        if self.marker_distance < 1.:
+            start_time = rospy.Time.now()
+            if self.ar_flag == 1:   #second ar
+                print("$$$$$$$$$$$$$$$$$$$$$")
+                print("ar_flag: ", self.ar_flag)
+                print("angle: ", angle_list[self.ar_flag])
+                print("$$$$$$$$$$$$$$$$$$$$$")
+                
+                while rospy.Time.now() - start_time < rospy.Duration(0.5):
+
+                    self.cmd_msg.angle =  int(-30)
+
+                    self.cmd_msg.speed = 3
+                    self.cmd_pub.publish(self.cmd_msg)
+
+                    rospy.sleep(0.1)  # Sleep for a short duration to avoid spamming
+                
+                while rospy.Time.now() - start_time < rospy.Duration(0.5):
+
+                    self.cmd_msg.angle =  50
+
+                    self.cmd_msg.speed = 3
+                    self.cmd_pub.publish(self.cmd_msg)
+
+                    rospy.sleep(0.1)  # Sleep for a short duration to av
+                
+                
+                return
+            else:
+                while rospy.Time.now() - start_time < rospy.Duration(0.8):
+                    print("$$$$$$$$$$$$$$$$$$$$$")
+                    print("ar_flag: ", self.ar_flag)
+                    print("angle: ", angle_list[self.ar_flag])
+                    print("$$$$$$$$$$$$$$$$$$$$$")
+
+                    self.cmd_msg.angle =  int(angle_list[self.ar_flag])
+
+                    self.cmd_msg.speed = 4
+                    self.cmd_pub.publish(self.cmd_msg)
+
+                    rospy.sleep(0.1)  # Sleep for a short duration to avoid spamming
+
+                
+            self.ar_flag += 1
+            return
 
         if ang_cmd > 50:
             ang_cmd = 50
@@ -215,13 +260,14 @@ class ArDriving:
             ang_cmd = -50
             
         self.cmd_msg.angle =  -int(ang_cmd)
-        self.cmd_msg.speed = int(lin_cmd) + 3
+        self.cmd_msg.speed = max(3,int(lin_cmd))
+        self.cmd_pub.publish(self.cmd_msg)
 
     def update_marker_angle_distance(self):
         if self.odom_ar_point:
             position_x = self.odom_ar_point.x - self.cur_odom.x
             position_y = self.odom_ar_point.y - self.cur_odom.y
-            self.marker_angle = math.atan(position_y / position_x) - self.odom_yaw
+            self.marker_angle = math.atan2(position_y, position_x) - self.odom_yaw
             self.marker_distance = math.sqrt(
                 position_x * position_x + position_y * position_y
             )
@@ -261,12 +307,13 @@ class ArDriving:
         target_ar = self.ar_list[min_idx]
         distance_diff = abs(self.dist_before - min_dist) 
         
-        print("----------------")
-        print("distance diff: ", distance_diff)
-        print("----------------")
+        # print("----------------")
+        # print("distance diff: ", distance_diff)
+        # print("----------------")
 
-        if distance_diff > 1.5 and 3.5 > distance_diff:
-            self.ar_flag += 1
+        # if distance_diff > 1 and 2.5 > distance_diff:
+            # self.ar_flag += 1
+            # pass
         
         self.dist_before = min_dist
 

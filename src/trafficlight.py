@@ -75,6 +75,14 @@ class TrafficLight:
 
         rate = rospy.Rate(10)
         
+
+        start_time_ = rospy.Time.now()
+        while rospy.Time.now() - start_time_ < rospy.Duration(0.5):
+            self.motor_msg.angle = 0
+            self.motor_msg.speed = 3
+            motor_pub.publish(self.motor_msg)
+            rospy.sleep(0.1)  # Sleep for a 
+
         while not rospy.is_shutdown():
             if not self.ar_subscribed:
                 # rospy.logwarn("AR not subscribed wait...")
@@ -91,6 +99,9 @@ class TrafficLight:
                 self.motor_msg.speed = 0
                 self.motor_msg.angle = 0
                 motor_pub.publish(self.motor_msg)
+
+                
+                rospy.signal_shutdown("Green light. End this node!!")
                 continue
             
             # move to ar marker by pid
@@ -101,8 +112,17 @@ class TrafficLight:
 
             motor_pub.publish(self.motor_msg)
 
-            if self.distance < 1.5:
+            if self.distance < 1.7:
                 rospy.loginfo("arrived!! distance: %d", self.distance)
+                
+                start_time_ = rospy.Time.now()
+                while rospy.Time.now() - start_time_ < rospy.Duration(1):
+                    self.motor_msg.angle = 25
+                    self.motor_msg.speed = 3
+                    motor_pub.publish(self.motor_msg)
+                    rospy.sleep(0.1)  # Sleep for a short duration to avoid spamming
+                
+                
                 self.arrived = True
 
 
@@ -179,7 +199,7 @@ class TrafficLight:
         self.heading_pid_ui_1 = ui
         print("angle: ", int(u / math.pi * 180))
 
-        self.motor_msg.angle = int(u / math.pi * 180)
+        self.motor_msg.angle = -int(u / math.pi * 180)
     
     def pid_distance(self):
         # PID controller to control the linear velocity based on distance
@@ -216,19 +236,19 @@ class TrafficLight:
             # cv2.imshow("original image",cv_image)
 
             height, width, _ = cv_image.shape
-            top_part = cv_image[0:height // 3, :, :]
+            top_part = cv_image[0:height//3, width//3:width//3*2, :]
 
             hsv = cv2.cvtColor(top_part, cv2.COLOR_BGR2HSV)
-            lower_green = np.array([40, 40, 40])
-            upper_green = np.array([80, 255, 255])
+            lower_green = np.array([90, 0, 0])
+            upper_green = np.array([100, 120, 120])
             mask = cv2.inRange(hsv, lower_green, upper_green)
 
-            # cv2.imshow("greenmask img",mask)
-            # cv2.waitKey(0)
+            cv2.imshow("greenmask img",mask)
+            cv2.waitKey(1)
 
             green_ratio = np.sum(mask > 0) / (mask.shape[0] * mask.shape[1])
 
-            threshold = 0.005
+            threshold = 100
             print("------------------")
             print("current green: ", green_ratio)
             print("------------------")
