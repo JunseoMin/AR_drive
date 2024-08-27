@@ -99,9 +99,6 @@ class TrafficLight:
                 self.motor_msg.speed = 0
                 self.motor_msg.angle = 0
                 motor_pub.publish(self.motor_msg)
-
-                
-                rospy.signal_shutdown("Green light. End this node!!")
                 continue
             
             # move to ar marker by pid
